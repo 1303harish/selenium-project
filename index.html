@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LicenseHub — Admin Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #161920;
+    --surface2: #1e2229;
+    --border: #2a2f3a;
+    --accent: #00e5a0;
+    --accent2: #0099ff;
+    --danger: #ff4d6d;
+    --warn: #ffb347;
+    --text: #e8ecf0;
+    --muted: #6b7585;
+    --free: #6b7585;
+    --pro: #0099ff;
+    --ent: #a855f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* LOGIN */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 999;
+    background-image: radial-gradient(ellipse 60% 60% at 50% 50%, #00e5a015 0%, transparent 70%);
+  }
+  .login-box {
+    width: 380px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 40px; box-shadow: 0 0 60px #00000080;
+  }
+  .login-box .logo { font-family: 'IBM Plex Mono', monospace; font-size: 22px; color: var(--accent); margin-bottom: 6px; }
+  .login-box .sub { color: var(--muted); font-size: 13px; margin-bottom: 32px; }
+  .login-box label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+  .login-box input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 14px; color: var(--text); font-size: 14px; margin-bottom: 18px; outline: none;
+    transition: border-color .2s;
+  }
+  .login-box input:focus { border-color: var(--accent); }
+  .login-btn {
+    width: 100%; background: var(--accent); color: #000; font-weight: 600; font-size: 14px;
+    border: none; border-radius: 6px; padding: 12px; cursor: pointer; transition: opacity .2s;
+  }
+  .login-btn:hover { opacity: .85; }
+  .login-error { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+
+  /* LAYOUT */
+  #app { display: none; height: 100vh; flex-direction: column; }
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 28px; height: 56px; display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .logo-h { font-family: 'IBM Plex Mono', monospace; font-size: 18px; color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .admin-badge {
+    background: #00e5a020; border: 1px solid #00e5a050; color: var(--accent);
+    padding: 4px 10px; border-radius: 4px; font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .logout-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted); font-size: 13px;
+    padding: 5px 14px; border-radius: 5px; cursor: pointer; transition: all .2s;
+  }
+  .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* TABS */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; padding: 0 28px; }
+  .tab {
+    padding: 14px 22px; font-size: 14px; font-weight: 500; cursor: pointer;
+    border-bottom: 2px solid transparent; color: var(--muted); transition: all .2s; margin-bottom: -1px;
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* CONTENT */
+  .content { flex: 1; overflow: auto; padding: 28px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* TOOLBAR */
+  .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .toolbar input[type="text"] {
+    flex: 1; min-width: 220px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 9px 14px; color: var(--text); font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  .toolbar input:focus { border-color: var(--accent2); }
+  .toolbar select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 9px 14px; color: var(--text); font-size: 14px; outline: none; cursor: pointer;
+  }
+  .btn {
+    padding: 9px 18px; border-radius: 6px; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none; transition: all .2s; white-space: nowrap;
+  }
+  .btn-accent { background: var(--accent); color: #000; }
+  .btn-accent:hover { opacity: .85; }
+  .btn-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: .85; }
+
+  /* TABLE */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    background: var(--surface2); padding: 12px 14px; text-align: left;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  thead th.sortable { cursor: pointer; user-select: none; }
+  thead th.sortable:hover { color: var(--text); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .15s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 10px 14px; vertical-align: middle; }
+  .mono { font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: .05em; font-family: 'IBM Plex Mono', monospace;
+  }
+  .badge-free { background: #6b758520; color: var(--free); border: 1px solid #6b758540; }
+  .badge-pro { background: #0099ff20; color: var(--pro); border: 1px solid #0099ff40; }
+  .badge-enterprise { background: #a855f720; color: var(--ent); border: 1px solid #a855f740; }
+
+  .role-tag { font-size: 12px; color: var(--muted); }
+  .role-protected { color: #ffb347; font-weight: 600; }
+
+  td .action-btn {
+    background: none; border: 1px solid var(--border); color: var(--muted); font-size: 11px;
+    padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all .15s; margin-right: 4px;
+  }
+  td .action-btn:hover { border-color: var(--accent2); color: var(--accent2); }
+
+  .pagination { display: flex; align-items: center; gap: 8px; margin-top: 18px; justify-content: flex-end; }
+  .pagination button {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; transition: all .2s;
+  }
+  .pagination button:hover:not(:disabled) { border-color: var(--accent2); color: var(--accent2); }
+  .pagination button:disabled { opacity: .3; cursor: default; }
+  .pagination .page-info { font-size: 13px; color: var(--muted); }
+
+  /* LICENSE MANAGER */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px;
+  }
+  .stat-card .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+  .stat-card .value { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 600; }
+  .stat-card .value.accent { color: var(--accent); }
+  .stat-card .value.blue { color: var(--accent2); }
+  .stat-card .value.purple { color: var(--ent); }
+  .stat-card .value.warn { color: var(--warn); }
+
+  .license-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 24px; }
+
+  /* MODAL */
+  .modal-bg {
+    position: fixed; inset: 0; background: #00000090; z-index: 100;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 32px; width: 420px; max-width: 95vw;
+  }
+  .modal h3 { font-size: 17px; margin-bottom: 6px; }
+  .modal .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .modal label { display: block; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 6px; margin-top: 14px; }
+  .modal select, .modal input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 14px; color: var(--text); font-size: 14px; outline: none;
+  }
+  .modal-btns { display: flex; gap: 10px; margin-top: 24px; justify-content: flex-end; }
+  .toast {
+    position: fixed; bottom: 28px; right: 28px; background: var(--surface); border: 1px solid var(--accent);
+    color: var(--accent); padding: 12px 20px; border-radius: 8px; font-size: 13px;
+    opacity: 0; transition: opacity .3s; z-index: 999; pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+
+  .info-bar { background: #0099ff12; border: 1px solid #0099ff30; border-radius: 6px; padding: 10px 16px; font-size: 13px; color: var(--accent2); margin-bottom: 20px; }
+  .count-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; margin-left: 8px; }
+
+  /* CSV UPLOAD */
+  .upload-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px; margin-bottom: 24px;
+  }
+  .upload-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .upload-panel-header h3 { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .badge-new {
+    background: #00e5a020; border: 1px solid #00e5a050; color: var(--accent);
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .drop-zone {
+    border: 2px dashed var(--border); border-radius: 8px; padding: 32px 20px;
+    text-align: center; cursor: pointer; transition: all .2s; position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent2); background: #0099ff08; }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-zone .drop-icon { font-size: 28px; margin-bottom: 8px; }
+  .drop-zone .drop-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+  .drop-zone .drop-sub { font-size: 12px; color: var(--muted); }
+  .drop-zone.has-file { border-color: var(--accent); background: #00e5a008; }
+  .upload-col-map { margin-top: 16px; display: none; }
+  .upload-col-map.visible { display: block; }
+  .col-map-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 10px; }
+  .col-map-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .col-map-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .col-map-row .field-name { color: var(--muted); width: 160px; font-size: 12px; font-family: 'IBM Plex Mono', monospace; flex-shrink: 0; }
+  .col-map-row select {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 6px 10px; color: var(--text); font-size: 12px; outline: none;
+  }
+  .upload-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  .upload-preview-bar { font-size: 13px; color: var(--muted); flex: 1; min-width: 160px; }
+  .upload-preview-bar span { color: var(--accent); font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+  .modal-lg { width: 780px; max-width: 96vw; max-height: 88vh; overflow-y: auto; }
+  .preview-table-wrap { max-height: 300px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 12px; }
+  .preview-table-wrap table { font-size: 12px; }
+  .import-result { margin-top: 14px; padding: 12px 16px; border-radius: 6px; font-size: 13px; display: none; }
+  .import-result.success { background: #00e5a012; border: 1px solid #00e5a040; color: var(--accent); }
+  .import-result.warn { background: #ffb34712; border: 1px solid #ffb34740; color: var(--warn); }
+  .skipped-list { margin-top: 8px; font-size: 11px; color: var(--muted); max-height: 72px; overflow-y: auto; font-family: 'IBM Plex Mono', monospace; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">⬡ LicenseHub</div>
+    <div class="sub">Admin Portal — Selenium Test Sandbox</div>
+    <label>Username</label>
+    <input type="text" id="login-user" placeholder="Enter username" autocomplete="off">
+    <label>Password</label>
+    <input type="password" id="login-pass" placeholder="Enter password">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-error" id="login-error">Invalid credentials. Try Admin / admin123</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="logo-h">⬡ LicenseHub</div>
+    <div class="header-right">
+      <span class="admin-badge">ADMIN</span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('directory')">User Directory</div>
+    <div class="tab" onclick="switchTab('licenses')">License Manager</div>
+  </div>
+  <div class="content">
+
+    <!-- USER DIRECTORY -->
+    <div class="page active" id="page-directory">
+      <div class="toolbar">
+        <input type="text" id="search-input" placeholder="Search by name, email, username…" oninput="renderTable()">
+        <select id="filter-tier" onchange="renderTable()">
+          <option value="">All Tiers</option>
+          <option value="Free">Free</option>
+          <option value="Pro">Pro</option>
+          <option value="Enterprise">Enterprise</option>
+        </select>
+        <select id="filter-role" onchange="renderTable()">
+          <option value="">All Roles</option>
+        </select>
+        <button class="btn btn-accent" onclick="exportCSV()">⬇ Download CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table id="user-table">
+          <thead>
+            <tr>
+              <th class="sortable" onclick="sortBy('username')">Username ↕</th>
+              <th class="sortable" onclick="sortBy('firstName')">First Name ↕</th>
+              <th class="sortable" onclick="sortBy('lastName')">Last Name ↕</th>
+              <th>Email</th>
+              <th class="sortable" onclick="sortBy('lastLogin')">Last Login ↕</th>
+              <th class="sortable" onclick="sortBy('daysSince')">Days Since Login ↕</th>
+              <th>Tier</th>
+              <th>Role</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span class="page-info" id="page-info"></span>
+        <button id="prev-btn" onclick="prevPage()">← Prev</button>
+        <button id="next-btn" onclick="nextPage()">Next →</button>
+      </div>
+    </div>
+
+    <!-- LICENSE MANAGER -->
+    <div class="page" id="page-licenses">
+      <div class="info-bar">🔒 License management actions are logged. Protected roles are excluded from bulk operations.</div>
+
+      <!-- CSV UPLOAD PANEL -->
+      <div class="upload-panel">
+        <div class="upload-panel-header">
+          <h3>📂 Import User Directory CSV <span class="badge-new">New</span></h3>
+          <button class="btn btn-outline" style="font-size:12px" onclick="resetUpload()">✕ Clear</button>
+        </div>
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" accept=".csv,text/csv" id="csv-file-input" onchange="handleFileSelect(this.files[0])">
+          <div class="drop-icon">📄</div>
+          <div class="drop-title" id="drop-title">Drop your CSV here, or click to browse</div>
+          <div class="drop-sub" id="drop-sub">Accepts .csv files — columns will be auto-mapped</div>
+        </div>
+
+        <div class="upload-col-map" id="col-map-section">
+          <div class="col-map-title">Column Mapping — match your CSV headers to system fields</div>
+          <div class="col-map-grid" id="col-map-grid"></div>
+        </div>
+
+        <div class="upload-actions">
+          <div class="upload-preview-bar" id="upload-preview-bar"></div>
+          <button class="btn btn-outline" id="btn-preview" onclick="openImportPreview()" style="display:none">👁 Preview Import</button>
+          <button class="btn btn-accent" id="btn-import" onclick="doImport()" style="display:none">⬆ Append to Directory</button>
+        </div>
+      </div>
+
+      <div class="stats-row" id="stats-row"></div>
+      <div class="toolbar">
+        <input type="text" id="lic-search" placeholder="Search users…" oninput="renderLicTable()">
+        <select id="lic-tier" onchange="renderLicTable()">
+          <option value="">All Tiers</option>
+          <option value="Free">Free</option>
+          <option value="Pro">Pro</option>
+          <option value="Enterprise">Enterprise</option>
+        </select>
+        <button class="btn btn-outline" onclick="bulkDowngrade()">⬇ Bulk Downgrade to Free</button>
+        <button class="btn btn-accent" onclick="bulkRenew()">↺ Bulk Renew Selected</button>
+      </div>
+      <div class="license-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="select-all" onchange="toggleAll(this)"></th>
+              <th>Username</th>
+              <th>Full Name</th>
+              <th>Email</th>
+              <th>Current Tier</th>
+              <th>Role</th>
+              <th>Last Login</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="lic-body"></tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span class="page-info" id="lic-page-info"></span>
+        <button id="lic-prev" onclick="licPrev()">← Prev</button>
+        <button id="lic-next" onclick="licNext()">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT LAST LOGIN MODAL -->
+<div class="modal-bg" id="modal-login">
+  <div class="modal">
+    <h3>Edit Last Login</h3>
+    <div class="sub" id="modal-login-user"></div>
+    <label>Last Login Date & Time</label>
+    <input type="datetime-local" id="modal-login-val">
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-login')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveLogin()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT LICENSE MODAL -->
+<div class="modal-bg" id="modal-license">
+  <div class="modal">
+    <h3 id="modal-lic-title">Manage License</h3>
+    <div class="sub" id="modal-lic-user"></div>
+    <label>Membership Tier</label>
+    <select id="modal-lic-tier">
+      <option value="Free">Free</option>
+      <option value="Pro">Pro</option>
+      <option value="Enterprise">Enterprise</option>
+    </select>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-license')">Cancel</button>
+      <button class="btn btn-accent" onclick="saveLicense()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- IMPORT PREVIEW MODAL -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal modal-lg">
+    <h3>Import Preview</h3>
+    <div class="sub" id="import-preview-sub"></div>
+    <div class="preview-table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Username</th><th>First Name</th><th>Last Name</th><th>Email</th>
+            <th>Last Login</th><th>Tier</th><th>Role</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="preview-body"></tbody>
+      </table>
+    </div>
+    <div class="import-result" id="import-result">
+      <div id="import-result-text"></div>
+      <div class="skipped-list" id="skipped-list"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-outline" onclick="closeModal('modal-import')">Close</button>
+      <button class="btn btn-accent" id="confirm-import-btn" onclick="confirmImport()">✓ Confirm &amp; Append</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA GENERATION ──────────────────────────────────────────────────
+// ── DATA ──────────────────────────────────────────────────────────────
+const PROTECTED_ROLES = ['CEO', 'CTO', 'CFO', 'Legal Counsel', 'Board Member'];
+
+function randInt(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function pick(arr){return arr[randInt(0,arr.length-1)];}
+function fmtDate(d){return d.toISOString().slice(0,16);}
+function daysSince(s){return Math.floor((Date.now()-new Date(s))/(86400000));}
+function dispDate(s){const d=new Date(s);return d.toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});}
+
+let users = [{"id":1,"username":"pmartins","firstName":"Pita","lastName":"Martins","email":"pmartins@company.io","lastLogin":"2025-12-03T09:00","tier":"Free","role":"CEO"},{"id":2,"username":"ltanaka","firstName":"Leon","lastName":"Tanaka","email":"ltanaka@company.io","lastLogin":"2026-02-22T09:00","tier":"Free","role":"CTO"},{"id":3,"username":"abautista","firstName":"Abena","lastName":"Bautista","email":"abautista@company.io","lastLogin":"2025-12-08T09:00","tier":"Free","role":"CFO"},{"id":4,"username":"ltanaka1","firstName":"Layla","lastName":"Tanaka","email":"ltanaka1@company.io","lastLogin":"2025-05-21T09:00","tier":"Free","role":"Legal Counsel"},{"id":5,"username":"pholmberg","firstName":"Priya","lastName":"Holmberg","email":"pholmberg@company.io","lastLogin":"2025-07-03T09:00","tier":"Free","role":"Board Member"},{"id":6,"username":"mholm","firstName":"Mason","lastName":"Holm","email":"mholm@company.io","lastLogin":"2025-10-06T09:00","tier":"Free","role":"Security Engineer"},{"id":7,"username":"csvensson","firstName":"Chidi","lastName":"Svensson","email":"csvensson@company.io","lastLogin":"2026-03-04T09:00","tier":"Free","role":"Solutions Architect"},{"id":8,"username":"cpark","firstName":"Cian","lastName":"Park","email":"cpark@company.io","lastLogin":"2025-09-15T09:00","tier":"Enterprise","role":"Engineering Manager"},{"id":9,"username":"hholmberg","firstName":"Hannah","lastName":"Holmberg","email":"hholmberg@company.io","lastLogin":"2024-12-13T09:00","tier":"Free","role":"Solutions Architect"},{"id":10,"username":"nsvensson","firstName":"Niamh","lastName":"Svensson","email":"nsvensson@company.io","lastLogin":"2026-04-06T09:00","tier":"Pro","role":"DevOps Engineer"},{"id":11,"username":"isato","firstName":"Ivan","lastName":"Sato","email":"isato@company.io","lastLogin":"2025-12-15T09:00","tier":"Enterprise","role":"VP Marketing"},{"id":12,"username":"candersen","firstName":"Callum","lastName":"Andersen","email":"candersen@company.io","lastLogin":"2026-02-01T09:00","tier":"Pro","role":"IT Admin"},{"id":13,"username":"gokafor","firstName":"Grainne","lastName":"Okafor","email":"gokafor@company.io","lastLogin":"2026-04-01T09:00","tier":"Pro","role":"VP Engineering"},{"id":14,"username":"pafolabi","firstName":"Penelope","lastName":"Afolabi","email":"pafolabi@company.io","lastLogin":"2025-05-01T09:00","tier":"Enterprise","role":"VP Sales"},{"id":15,"username":"oafolabi","firstName":"Omar","lastName":"Afolabi","email":"oafolabi@company.io","lastLogin":"2025-07-01T09:00","tier":"Pro","role":"Data Analyst"},{"id":16,"username":"okobayashi","firstName":"Oliver","lastName":"Kobayashi","email":"okobayashi@company.io","lastLogin":"2025-06-14T09:00","tier":"Free","role":"QA Engineer"},{"id":17,"username":"mjohansson","firstName":"Mei","lastName":"Johansson","email":"mjohansson@company.io","lastLogin":"2025-08-06T09:00","tier":"Enterprise","role":"Designer"},{"id":18,"username":"hdlamini","firstName":"Hassan","lastName":"Dlamini","email":"hdlamini@company.io","lastLogin":"2026-03-08T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":19,"username":"bdlamini","firstName":"Bao","lastName":"Dlamini","email":"bdlamini@company.io","lastLogin":"2026-03-23T09:00","tier":"Free","role":"Business Analyst"},{"id":20,"username":"jnguyen","firstName":"James","lastName":"Nguyen","email":"jnguyen@company.io","lastLogin":"2026-04-05T09:00","tier":"Pro","role":"Finance Manager"},{"id":21,"username":"aokafor","firstName":"Aiden","lastName":"Okafor","email":"aokafor@company.io","lastLogin":"2026-01-24T09:00","tier":"Free","role":"QA Engineer"},{"id":22,"username":"hflores","firstName":"Hannah","lastName":"Flores","email":"hflores@company.io","lastLogin":"2025-11-03T09:00","tier":"Enterprise","role":"Product Manager"},{"id":23,"username":"bjohansson","firstName":"Bao","lastName":"Johansson","email":"bjohansson@company.io","lastLogin":"2026-02-26T09:00","tier":"Pro","role":"Scrum Master"},{"id":24,"username":"lchowdhury","firstName":"Lucas","lastName":"Chowdhury","email":"lchowdhury@company.io","lastLogin":"2026-04-11T09:00","tier":"Enterprise","role":"Customer Success Manager"},{"id":25,"username":"ftanaka","firstName":"Felix","lastName":"Tanaka","email":"ftanaka@company.io","lastLogin":"2025-12-07T09:00","tier":"Free","role":"Project Manager"},{"id":26,"username":"landersen","firstName":"Leila","lastName":"Andersen","email":"landersen@company.io","lastLogin":"2025-08-01T09:00","tier":"Free","role":"Marketing Specialist"},{"id":27,"username":"oeriksson","firstName":"Oliver","lastName":"Eriksson","email":"oeriksson@company.io","lastLogin":"2026-04-05T09:00","tier":"Enterprise","role":"Marketing Specialist"},{"id":28,"username":"rnielsen","firstName":"Raj","lastName":"Nielsen","email":"rnielsen@company.io","lastLogin":"2026-04-15T09:00","tier":"Enterprise","role":"Product Manager"},{"id":29,"username":"ainoue","firstName":"Amir","lastName":"Inoue","email":"ainoue@company.io","lastLogin":"2026-01-28T09:00","tier":"Free","role":"Senior Engineer"},{"id":30,"username":"chalvorsen","firstName":"Cian","lastName":"Halvorsen","email":"chalvorsen@company.io","lastLogin":"2025-06-29T09:00","tier":"Enterprise","role":"Product Manager"},{"id":31,"username":"mtanaka","firstName":"Mason","lastName":"Tanaka","email":"mtanaka@company.io","lastLogin":"2026-04-13T09:00","tier":"Free","role":"Project Manager"},{"id":32,"username":"jfujita","firstName":"Jonas","lastName":"Fujita","email":"jfujita@company.io","lastLogin":"2026-04-10T09:00","tier":"Pro","role":"Solutions Architect"},{"id":33,"username":"cibrahim","firstName":"Chloe","lastName":"Ibrahim","email":"cibrahim@company.io","lastLogin":"2025-09-05T09:00","tier":"Free","role":"Security Engineer"},{"id":34,"username":"zhagen","firstName":"Zainab","lastName":"Hagen","email":"zhagen@company.io","lastLogin":"2026-04-26T09:00","tier":"Pro","role":"VP Engineering"},{"id":35,"username":"jdiallo","firstName":"Julia","lastName":"Diallo","email":"jdiallo@company.io","lastLogin":"2026-03-16T09:00","tier":"Free","role":"DevOps Engineer"},{"id":36,"username":"ilarsson","firstName":"Ingrid","lastName":"Larsson","email":"ilarsson@company.io","lastLogin":"2026-04-27T09:00","tier":"Enterprise","role":"VP Sales"},{"id":37,"username":"ekaur","firstName":"Ethan","lastName":"Kaur","email":"ekaur@company.io","lastLogin":"2026-03-30T09:00","tier":"Enterprise","role":"Scrum Master"},{"id":38,"username":"rvasquez","firstName":"Rohan","lastName":"Vasquez","email":"rvasquez@company.io","lastLogin":"2026-03-02T09:00","tier":"Enterprise","role":"Director of Product"},{"id":39,"username":"nhagen","firstName":"Natasha","lastName":"Hagen","email":"nhagen@company.io","lastLogin":"2026-03-30T09:00","tier":"Free","role":"Scrum Master"},{"id":40,"username":"rhayashi","firstName":"Riku","lastName":"Hayashi","email":"rhayashi@company.io","lastLogin":"2025-10-07T09:00","tier":"Free","role":"Finance Manager"},{"id":41,"username":"sfujita","firstName":"Shirin","lastName":"Fujita","email":"sfujita@company.io","lastLogin":"2026-04-16T09:00","tier":"Pro","role":"Solutions Architect"},{"id":42,"username":"kdiallo","firstName":"Kofi","lastName":"Diallo","email":"kdiallo@company.io","lastLogin":"2025-12-14T09:00","tier":"Enterprise","role":"Director of Product"},{"id":43,"username":"zsantos","firstName":"Zoey","lastName":"Santos","email":"zsantos@company.io","lastLogin":"2025-05-10T09:00","tier":"Enterprise","role":"Engineering Manager"},{"id":44,"username":"dmatsumoto","firstName":"Declan","lastName":"Matsumoto","email":"dmatsumoto@company.io","lastLogin":"2025-12-18T09:00","tier":"Enterprise","role":"Support Engineer"},{"id":45,"username":"smatsumoto","firstName":"Sakura","lastName":"Matsumoto","email":"smatsumoto@company.io","lastLogin":"2025-07-13T09:00","tier":"Pro","role":"Engineering Manager"},{"id":46,"username":"cthornton","firstName":"Callum","lastName":"Thornton","email":"cthornton@company.io","lastLogin":"2025-11-24T09:00","tier":"Free","role":"Security Engineer"},{"id":47,"username":"asalazar","firstName":"Avery","lastName":"Salazar","email":"asalazar@company.io","lastLogin":"2025-06-05T09:00","tier":"Free","role":"Security Engineer"},{"id":48,"username":"ssvensson","firstName":"Shirin","lastName":"Svensson","email":"ssvensson@company.io","lastLogin":"2025-09-25T09:00","tier":"Pro","role":"Engineering Manager"},{"id":49,"username":"dschmidt","firstName":"Divya","lastName":"Schmidt","email":"dschmidt.professional.account.extended@enterprise-global-solutions-division.io","lastLogin":"2025-07-12T09:00","tier":"Enterprise","role":"VP Sales"},{"id":50,"username":"pholm","firstName":"Penelope","lastName":"Holm","email":"pholm@company.io","lastLogin":"2025-07-03T09:00","tier":"Enterprise","role":"Director of Product"},{"id":51,"username":"radeyemi","firstName":"Riku","lastName":"Adeyemi","email":"radeyemi@company.io","lastLogin":"2026-01-06T09:00","tier":"Enterprise","role":"Customer Success Manager"},{"id":52,"username":"adlamini","firstName":"Arjun","lastName":"Dlamini","email":"adlamini@company.io","lastLogin":"2026-02-08T09:00","tier":"Enterprise","role":"Engineering Manager"},{"id":53,"username":"ehayashi","firstName":"Ethan","lastName":"Hayashi","email":"ehayashi@company.io","lastLogin":"2026-03-28T09:00","tier":"Pro","role":"Technical Writer"},{"id":54,"username":"adubois","firstName":"Adaeze","lastName":"Dubois","email":"adubois@company.io","lastLogin":"2025-12-25T09:00","tier":"Enterprise","role":"QA Engineer"},{"id":55,"username":"epark","firstName":"Ethan","lastName":"Park","email":"epark@company.io","lastLogin":"2026-03-26T09:00","tier":"Free","role":"Support Engineer"},{"id":56,"username":"arossi","firstName":"Andrei","lastName":"Rossi","email":"arossi@company.io","lastLogin":"2025-08-14T09:00","tier":"Enterprise","role":"Software Engineer"},{"id":57,"username":"pholmberg1","firstName":"Pita","lastName":"Holmberg","email":"pholmberg1@company.io","lastLogin":"2025-09-18T09:00","tier":"Enterprise","role":"Business Analyst"},{"id":58,"username":"eholm","firstName":"Elias","lastName":"Holm","email":"eholm@company.io","lastLogin":"2025-11-17T09:00","tier":"Enterprise","role":"Senior Engineer"},{"id":59,"username":"lnielsen","firstName":"Linh","lastName":"Nielsen","email":"lnielsen@company.io","lastLogin":"2025-12-25T09:00","tier":"Free","role":"Data Analyst"},{"id":60,"username":"enakamura","firstName":"Elijah","lastName":"Nakamura","email":"enakamura@company.io","lastLogin":"2025-07-21T09:00","tier":"Pro","role":"VP Sales"},{"id":61,"username":"mstrand","firstName":"Mei","lastName":"Strand","email":"mstrand@company.io","lastLogin":"2026-02-25T09:00","tier":"Pro","role":"VP Sales"},{"id":62,"username":"tmorgan","firstName":"Taylor","lastName":"Morgan","email":"tmorgan@company.io","lastLogin":"2025-12-23T09:00","tier":"Enterprise","role":"Designer"},{"id":63,"username":"tmorgan1","firstName":"Taylor","lastName":"Morgan","email":"tmorgan1@company.io","lastLogin":"2025-11-21T09:00","tier":"Free","role":"VP Marketing"},{"id":64,"username":"zalhassan","firstName":"Zainab","lastName":"Al-Hassan","email":"zalhassan@company.io","lastLogin":"2025-11-05T09:00","tier":"Pro","role":"Data Analyst"},{"id":65,"username":"hibrahim","firstName":"Heidi","lastName":"Ibrahim","email":"hibrahim@company.io","lastLogin":"2026-03-08T09:00","tier":"Pro","role":"Customer Success Manager"},{"id":66,"username":"mhalvorsen","firstName":"Mei","lastName":"Halvorsen","email":"mhalvorsen@company.io","lastLogin":"2026-02-15T09:00","tier":"Pro","role":"Sales Representative"},{"id":67,"username":"iivanov","firstName":"Isabella","lastName":"Ivanov","email":"iivanov@company.io","lastLogin":"2026-01-26T09:00","tier":"Pro","role":"Support Engineer"},{"id":68,"username":"rbergmann","firstName":"Rasmus","lastName":"Bergmann","email":"rbergmann@company.io","lastLogin":"2025-11-15T09:00","tier":"Enterprise","role":"Senior Engineer"},{"id":69,"username":"jthornton","firstName":"Jae","lastName":"Thornton","email":"jthornton@company.io","lastLogin":"2025-11-19T09:00","tier":"Free","role":"Senior Engineer"},{"id":70,"username":"jeze","firstName":"James","lastName":"Eze","email":"jeze@company.io","lastLogin":"2025-11-12T09:00","tier":"Free","role":"Marketing Specialist"},{"id":71,"username":"lboateng","firstName":"Leila","lastName":"Boateng","email":"lboateng@company.io","lastLogin":"2026-03-24T09:00","tier":"Free","role":"QA Engineer"},{"id":72,"username":"hpatel","firstName":"Hannah","lastName":"Patel","email":"hpatel@company.io","lastLogin":"2026-02-22T09:00","tier":"Free","role":"Customer Success Manager"},{"id":73,"username":"bvargas","firstName":"Bjorn","lastName":"Vargas","email":"bvargas@company.io","lastLogin":"2025-07-04T09:00","tier":"Enterprise","role":"DevOps Engineer"},{"id":74,"username":"mpetrov","firstName":"Mateo","lastName":"Petrov","email":"mpetrov@company.io","lastLogin":"2025-06-27T09:00","tier":"Pro","role":"Sales Representative"},{"id":75,"username":"mogawa","firstName":"Miriam","lastName":"Ogawa","email":"mogawa@company.io","lastLogin":"2026-03-04T09:00","tier":"Free","role":"Support Engineer"},{"id":76,"username":"adupontleclair","firstName":"Anne","lastName":"Dupont-Leclair","email":"adupontleclair@company.io","lastLogin":"2026-04-04T09:00","tier":"Free","role":"Support Engineer"},{"id":77,"username":"abjornstad","firstName":"Amir","lastName":"Bjornstad","email":"abjornstad@company.io","lastLogin":"2025-10-24T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":78,"username":"dpetrov","firstName":"Divya","lastName":"Petrov","email":"dpetrov@company.io","lastLogin":"2026-04-25T09:00","tier":"Enterprise","role":"HR Manager"},{"id":79,"username":"cgutierrez","firstName":"Chisom","lastName":"Gutierrez","email":"cgutierrez@company.io","lastLogin":"2026-03-29T09:00","tier":"Pro","role":"Scrum Master"},{"id":80,"username":"zhayashi","firstName":"Zoe","lastName":"Hayashi","email":"zhayashi@company.io","lastLogin":"2025-12-02T09:00","tier":"Pro","role":"Designer"},{"id":81,"username":"tsato","firstName":"Tobias","lastName":"Sato","email":"tsato@company.io","lastLogin":"2026-02-04T09:00","tier":"Free","role":"VP Marketing"},{"id":82,"username":"fvargas","firstName":"Fatima","lastName":"Vargas","email":"fvargas@company.io","lastLogin":"2025-08-05T09:00","tier":"Free","role":"QA Engineer"},{"id":83,"username":"kwatanabe","firstName":"Kofi","lastName":"Watanabe","email":"kwatanabe@company.io","lastLogin":"2025-08-21T09:00","tier":"Pro","role":"HR Manager"},{"id":84,"username":"zstrand","firstName":"Zoey","lastName":"Strand","email":"zstrand@company.io","lastLogin":"2025-11-22T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":85,"username":"tmendoza","firstName":"Tariq","lastName":"Mendoza","email":"tmendoza@company.io","lastLogin":"2025-06-29T09:00","tier":"Pro","role":"IT Admin"},{"id":86,"username":"smensah","firstName":"Seun","lastName":"Mensah","email":"smensah@company.io","lastLogin":"2025-09-24T09:00","tier":"Free","role":"Finance Manager"},{"id":87,"username":"tnguyen","firstName":"Tobias","lastName":"Nguyen","email":"tnguyen@company.io","lastLogin":"2025-06-25T09:00","tier":"Pro","role":"Scrum Master"},{"id":88,"username":"freyes","firstName":"Fatima","lastName":"Reyes","email":"freyes@company.io","lastLogin":"2025-06-17T09:00","tier":"Enterprise","role":"Scrum Master"},{"id":89,"username":"pobrien","firstName":"Patrick","lastName":"O'Brien","email":"pobrien@company.io","lastLogin":"2025-06-30T09:00","tier":"Free","role":"Software Engineer"},{"id":90,"username":"ckim","firstName":"Clara","lastName":"Kim","email":"ckim@company.io","lastLogin":"2025-10-18T09:00","tier":"Free","role":"Software Engineer"},{"id":91,"username":"aeriksson","firstName":"Amara","lastName":"Eriksson","email":"aeriksson@company.io","lastLogin":"2026-01-10T09:00","tier":"Enterprise","role":"VP Sales"},{"id":92,"username":"rpatel","firstName":"Riley","lastName":"Patel","email":"rpatel@company.io","lastLogin":"2026-01-01T09:00","tier":"Pro","role":"Finance Manager"},{"id":93,"username":"eokafor","firstName":"Elijah","lastName":"Okafor","email":"eokafor@company.io","lastLogin":"2025-07-23T09:00","tier":"Pro","role":"Software Engineer"},{"id":94,"username":"mrodrigues","firstName":"Minh","lastName":"Rodrigues","email":"mrodrigues@company.io","lastLogin":"2025-08-18T09:00","tier":"Free","role":"IT Admin"},{"id":95,"username":"zstrand1","firstName":"Zoe","lastName":"Strand","email":"zstrand1@company.io","lastLogin":"2026-02-24T09:00","tier":"Pro","role":"IT Admin"},{"id":96,"username":"hstrand","firstName":"Hannah","lastName":"Strand","email":"hstrand@company.io","lastLogin":"2025-08-19T09:00","tier":"Pro","role":"DevOps Engineer"},{"id":97,"username":"aasante","firstName":"Ananya","lastName":"Asante","email":"aasante@company.io","lastLogin":"2025-08-22T09:00","tier":"Enterprise","role":"Support Engineer"},{"id":98,"username":"mamadi","firstName":"Mei","lastName":"Amadi","email":"mamadi@company.io","lastLogin":"2025-09-05T09:00","tier":"Free","role":"VP Marketing"},{"id":99,"username":"mramos","firstName":"Mason","lastName":"Ramos","email":"mramos@company.io","lastLogin":"2026-04-09T09:00","tier":"Pro","role":"Technical Writer"},{"id":100,"username":"ebautista","firstName":"Elijah","lastName":"Bautista","email":"ebautista@company.io","lastLogin":"2026-02-27T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":101,"username":"cnwosu","firstName":"Chloe","lastName":"Nwosu","email":"cnwosu@company.io","lastLogin":"2025-10-13T09:00","tier":"Enterprise","role":"Solutions Architect"},{"id":102,"username":"jmartinez","firstName":"José","lastName":"Martínez","email":"jmartinez@company.io","lastLogin":"2025-12-02T09:00","tier":"Free","role":"Project Manager"},{"id":103,"username":"sbakke","firstName":"Sofia","lastName":"Bakke","email":"sbakke@company.io","lastLogin":"2025-10-30T09:00","tier":"Enterprise","role":"Director of Product"},{"id":104,"username":"hvang","firstName":"Hassan","lastName":"Vang","email":"hvang@company.io","lastLogin":"2026-04-07T09:00","tier":"Free","role":"Technical Writer"},{"id":105,"username":"hivanov","firstName":"Hannah","lastName":"Ivanov","email":"hivanov@company.io","lastLogin":"2026-01-16T09:00","tier":"Free","role":"VP Sales"},{"id":106,"username":"rmatsumoto","firstName":"Reza","lastName":"Matsumoto","email":"rmatsumoto@company.io","lastLogin":"2025-06-24T09:00","tier":"Enterprise","role":"Product Manager"},{"id":107,"username":"nkimura","firstName":"Natasha","lastName":"Kimura","email":"nkimura@company.io","lastLogin":"2026-03-07T09:00","tier":"Free","role":"Product Manager"},{"id":108,"username":"etanabe","firstName":"Emeka","lastName":"Tanabe","email":"etanabe@company.io","lastLogin":"2026-03-14T09:00","tier":"Free","role":"Product Manager"},{"id":109,"username":"ekowalski","firstName":"Elijah","lastName":"Kowalski","email":"ekowalski@company.io","lastLogin":"2025-12-30T09:00","tier":"Enterprise","role":"QA Engineer"},{"id":110,"username":"bkaur","firstName":"Bao","lastName":"Kaur","email":"bkaur@company.io","lastLogin":"2025-08-10T09:00","tier":"Pro","role":"Support Engineer"},{"id":111,"username":"seriksson","firstName":"Siobhan","lastName":"Eriksson","email":"seriksson@company.io","lastLogin":"2025-11-04T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":112,"username":"jmartins","firstName":"Jae","lastName":"Martins","email":"jmartins@company.io","lastLogin":"2026-01-29T09:00","tier":"Free","role":"Marketing Specialist"},{"id":113,"username":"hadeyemi","firstName":"Heidi","lastName":"Adeyemi","email":"hadeyemi@company.io","lastLogin":"2025-05-18T09:00","tier":"Free","role":"Data Analyst"},{"id":114,"username":"asantos","firstName":"Abena","lastName":"Santos","email":"asantos@company.io","lastLogin":"2025-05-14T09:00","tier":"Free","role":"Sales Representative"},{"id":115,"username":"hcastillo","firstName":"Heidi","lastName":"Castillo","email":"hcastillo@company.io","lastLogin":"2025-12-02T09:00","tier":"Pro","role":"Project Manager"},{"id":116,"username":"ryamada","firstName":"Reza","lastName":"Yamada","email":"ryamada@company.io","lastLogin":"2026-02-22T09:00","tier":"Pro","role":"Scrum Master"},{"id":117,"username":"ipatel","firstName":"Isabella","lastName":"Patel","email":"ipatel@company.io","lastLogin":"2026-04-06T09:00","tier":"Pro","role":"Finance Manager"},{"id":118,"username":"shagen","firstName":"Sofia","lastName":"Hagen","email":"shagen@company.io","lastLogin":"2025-08-16T09:00","tier":"Free","role":"QA Engineer"},{"id":119,"username":"lkowalski","firstName":"Logan","lastName":"Kowalski","email":"lkowalski@company.io","lastLogin":"2025-06-16T09:00","tier":"Pro","role":"Sales Representative"},{"id":120,"username":"tchristiansen","firstName":"Tobias","lastName":"Christiansen","email":"tchristiansen@company.io","lastLogin":"2025-11-26T09:00","tier":"Free","role":"Solutions Architect"},{"id":121,"username":"lhayashi","firstName":"Luna","lastName":"Hayashi","email":"lhayashi@company.io","lastLogin":"2025-05-05T09:00","tier":"Free","role":"DevOps Engineer"},{"id":122,"username":"calhassan","firstName":"Chloe","lastName":"Al-Hassan","email":"calhassan@company.io","lastLogin":"2026-02-14T09:00","tier":"Pro","role":"Technical Writer"},{"id":123,"username":"lbakke","firstName":"Layla","lastName":"Bakke","email":"lbakke@company.io","lastLogin":"2026-04-23T09:00","tier":"Enterprise","role":"Technical Writer"},{"id":124,"username":"dchowdhury","firstName":"Darius","lastName":"Chowdhury","email":"dchowdhury@company.io","lastLogin":"2026-04-24T09:00","tier":"Free","role":"Data Analyst"},{"id":125,"username":"lkaur","firstName":"Layla","lastName":"Kaur","email":"lkaur@company.io","lastLogin":"2026-04-04T09:00","tier":"Pro","role":"HR Manager"},{"id":126,"username":"cpetrov","firstName":"Camila","lastName":"Petrov","email":"cpetrov@company.io","lastLogin":"2025-12-13T09:00","tier":"Pro","role":"Engineering Manager"},{"id":127,"username":"dmagnusson","firstName":"Darius","lastName":"Magnusson","email":"dmagnusson@company.io","lastLogin":"2025-12-17T09:00","tier":"Pro","role":"Senior Engineer"},{"id":128,"username":"kromero","firstName":"Kenji","lastName":"Romero","email":"kromero@company.io","lastLogin":"2026-04-08T09:00","tier":"Enterprise","role":"Software Engineer"},{"id":129,"username":"cstrom","firstName":"Chisom","lastName":"Strom","email":"cstrom@company.io","lastLogin":"2025-08-28T09:00","tier":"Free","role":"Scrum Master"},{"id":130,"username":"inkosi","firstName":"Irina","lastName":"Nkosi","email":"inkosi@company.io","lastLogin":"2026-04-10T09:00","tier":"Pro","role":"VP Marketing"},{"id":131,"username":"csantos","firstName":"Cyrus","lastName":"Santos","email":"csantos@company.io","lastLogin":"2025-09-17T09:00","tier":"Enterprise","role":"Marketing Specialist"},{"id":132,"username":"hmwangi","firstName":"Hassan","lastName":"Mwangi","email":"hmwangi@company.io","lastLogin":"2026-01-25T09:00","tier":"Enterprise","role":"Marketing Specialist"},{"id":133,"username":"gramos","firstName":"Grainne","lastName":"Ramos","email":"gramos@company.io","lastLogin":"2025-10-19T09:00","tier":"Enterprise","role":"Marketing Specialist"},{"id":134,"username":"nkimura1","firstName":"Nora","lastName":"Kimura","email":"nkimura1@company.io","lastLogin":"2025-12-30T09:00","tier":"Enterprise","role":"Business Analyst"},{"id":135,"username":"zsuzuki","firstName":"Zoe","lastName":"Suzuki","email":"zsuzuki@company.io","lastLogin":"2026-01-14T09:00","tier":"Free","role":"Director of Product"},{"id":136,"username":"jpetrov","firstName":"Jae","lastName":"Petrov","email":"jpetrov@company.io","lastLogin":"2025-11-27T09:00","tier":"Pro","role":"VP Sales"},{"id":137,"username":"hnakamura","firstName":"Hannah","lastName":"Nakamura","email":"hnakamura@company.io","lastLogin":"2025-04-29T09:00","tier":"Pro","role":"Software Engineer"},{"id":138,"username":"pdiallo","firstName":"Pita","lastName":"Diallo","email":"pdiallo@company.io","lastLogin":"2025-11-19T09:00","tier":"Pro","role":"Technical Writer"},{"id":139,"username":"byamada","firstName":"Bjorn","lastName":"Yamada","email":"byamada@company.io","lastLogin":"2025-06-20T09:00","tier":"Pro","role":"Finance Manager"},{"id":140,"username":"fnakamura","firstName":"Fiona","lastName":"Nakamura","email":"fnakamura@company.io","lastLogin":"2025-08-25T09:00","tier":"Enterprise","role":"Project Manager"},{"id":141,"username":"areyes","firstName":"Aoife","lastName":"Reyes","email":"areyes@company.io","lastLogin":"2026-04-29T09:00","tier":"Free","role":"Data Analyst"},{"id":142,"username":"aadeyemi","firstName":"Andrei","lastName":"Adeyemi","email":"aadeyemi@company.io","lastLogin":"2025-10-29T09:00","tier":"Enterprise","role":"Director of Product"},{"id":143,"username":"rmagnusson","firstName":"Rohan","lastName":"Magnusson","email":"rmagnusson@company.io","lastLogin":"2025-07-21T09:00","tier":"Free","role":"QA Engineer"},{"id":144,"username":"sbjornstad","firstName":"Seun","lastName":"Bjornstad","email":"sbjornstad@company.io","lastLogin":"2025-07-08T09:00","tier":"Pro","role":"VP Engineering"},{"id":145,"username":"mokafor","firstName":"Miriam","lastName":"Okafor","email":"mokafor@company.io","lastLogin":"2025-07-27T09:00","tier":"Enterprise","role":"Sales Representative"},{"id":146,"username":"tafolabi","firstName":"Thu","lastName":"Afolabi","email":"tafolabi@company.io","lastLogin":"2025-07-12T09:00","tier":"Pro","role":"QA Engineer"},{"id":147,"username":"easante","firstName":"Elias","lastName":"Asante","email":"easante@company.io","lastLogin":"2025-10-04T09:00","tier":"Free","role":"Marketing Specialist"},{"id":148,"username":"zkovacs","firstName":"Zainab","lastName":"Kovacs","email":"zkovacs@company.io","lastLogin":"2026-02-06T09:00","tier":"Pro","role":"VP Engineering"},{"id":149,"username":"ybjornstad","firstName":"Yuki","lastName":"Bjornstad","email":"ybjornstad@company.io","lastLogin":"2026-04-13T09:00","tier":"Enterprise","role":"IT Admin"},{"id":150,"username":"mtanaka1","firstName":"Mila","lastName":"Tanaka","email":"mtanaka1@company.io","lastLogin":"2025-07-01T09:00","tier":"Pro","role":"Finance Manager"},{"id":151,"username":"ssantos","firstName":"Santiago","lastName":"Santos","email":"ssantos@company.io","lastLogin":"2026-04-13T09:00","tier":"Enterprise","role":"Solutions Architect"},{"id":152,"username":"ntanabe","firstName":"Niamh","lastName":"Tanabe","email":"ntanabe@company.io","lastLogin":"2025-05-18T09:00","tier":"Enterprise","role":"Designer"},{"id":153,"username":"schukwu","firstName":"Sofia","lastName":"Chukwu","email":"schukwu@company.io","lastLogin":"2026-02-06T09:00","tier":"Pro","role":"IT Admin"},{"id":154,"username":"bshuttleworthwentworth","firstName":"Bartholomew","lastName":"Shuttleworth-Wentworth","email":"bshuttleworthwentworth@company.io","lastLogin":"2026-02-09T09:00","tier":"Enterprise","role":"DevOps Engineer"},{"id":155,"username":"smendoza","firstName":"Seun","lastName":"Mendoza","email":"smendoza@company.io","lastLogin":"2025-10-09T09:00","tier":"Free","role":"QA Engineer"},{"id":156,"username":"akowalski","firstName":"Aria","lastName":"Kowalski","email":"akowalski@company.io","lastLogin":"2026-04-26T09:00","tier":"Pro","role":"Business Analyst"},{"id":157,"username":"smendoza1","firstName":"Stella","lastName":"Mendoza","email":"smendoza1@company.io","lastLogin":"2026-04-21T09:00","tier":"Free","role":"Product Manager"},{"id":158,"username":"lchukwu","firstName":"Lucas","lastName":"Chukwu","email":"lchukwu@company.io","lastLogin":"2026-04-25T09:00","tier":"Pro","role":"DevOps Engineer"},{"id":159,"username":"hcastillo1","firstName":"Hana","lastName":"Castillo","email":"hcastillo1@company.io","lastLogin":"2026-01-12T09:00","tier":"Enterprise","role":"Marketing Specialist"},{"id":160,"username":"igutierrez","firstName":"Ivan","lastName":"Gutierrez","email":"igutierrez@company.io","lastLogin":"2026-01-18T09:00","tier":"Free","role":"Designer"},{"id":161,"username":"eeze","firstName":"Emeka","lastName":"Eze","email":"eeze@company.io","lastLogin":"2026-04-21T09:00","tier":"Pro","role":"Product Manager"},{"id":162,"username":"vnkosi","firstName":"Viktor","lastName":"Nkosi","email":"vnkosi@company.io","lastLogin":"2025-10-11T09:00","tier":"Enterprise","role":"Software Engineer"},{"id":163,"username":"zuche","firstName":"Zoe","lastName":"Uche","email":"zuche@company.io","lastLogin":"2025-08-18T09:00","tier":"Free","role":"Support Engineer"},{"id":164,"username":"nbanda","firstName":"Nora","lastName":"Banda","email":"nbanda@company.io","lastLogin":"2026-03-29T09:00","tier":"Free","role":"DevOps Engineer"},{"id":165,"username":"ichristiansen","firstName":"Isabella","lastName":"Christiansen","email":"ichristiansen@company.io","lastLogin":"2026-02-01T09:00","tier":"Enterprise","role":"Project Manager"},{"id":166,"username":"ykim","firstName":"Yuki","lastName":"Kim","email":"ykim@company.io","lastLogin":"2025-11-25T09:00","tier":"Enterprise","role":"Business Analyst"},{"id":167,"username":"99rkobayashi","firstName":"Reza","lastName":"Kobayashi","email":"99rkobayashi@company.io","lastLogin":"2025-11-17T09:00","tier":"Pro","role":"Engineering Manager"},{"id":168,"username":"amatsumoto","firstName":"Avery","lastName":"Matsumoto","email":"amatsumoto@company.io","lastLogin":"2025-07-03T09:00","tier":"Free","role":"VP Engineering"},{"id":169,"username":"jandersen","firstName":"Julia","lastName":"Andersen","email":"jandersen@company.io","lastLogin":"2026-04-22T09:00","tier":"Enterprise","role":"Finance Manager"},{"id":170,"username":"astrom","firstName":"Aroha","lastName":"Strom","email":"astrom@company.io","lastLogin":"2025-11-28T09:00","tier":"Enterprise","role":"Support Engineer"},{"id":171,"username":"rromero","firstName":"Raj","lastName":"Romero","email":"rromero@company.io","lastLogin":"2026-04-07T09:00","tier":"Enterprise","role":"IT Admin"},{"id":172,"username":"akobayashi","firstName":"Amir","lastName":"Kobayashi","email":"akobayashi@company.io","lastLogin":"2026-03-05T09:00","tier":"Free","role":"Technical Writer"},{"id":173,"username":"lmensah","firstName":"Lucas","lastName":"Mensah","email":"lmensah@company.io","lastLogin":"2026-03-19T09:00","tier":"Pro","role":"HR Manager"},{"id":174,"username":"gvang","firstName":"Grainne","lastName":"Vang","email":"gvang@company.io","lastLogin":"2026-03-17T09:00","tier":"Pro","role":"Senior Engineer"},{"id":175,"username":"vsalazar","firstName":"Valentina","lastName":"Salazar","email":"vsalazar@company.io","lastLogin":"2025-11-15T09:00","tier":"Free","role":"QA Engineer"},{"id":176,"username":"pserrano","firstName":"Penelope","lastName":"Serrano","email":"pserrano@company.io","lastLogin":"2026-03-25T09:00","tier":"Free","role":"Senior Engineer"},{"id":177,"username":"heriksson","firstName":"Hana","lastName":"Eriksson","email":"heriksson@company.io","lastLogin":"2025-09-17T09:00","tier":"Pro","role":"VP Sales"},{"id":178,"username":"mholmberg","firstName":"Mateo","lastName":"Holmberg","email":"mholmberg@company.io","lastLogin":"2025-10-28T09:00","tier":"Enterprise","role":"Solutions Architect"},{"id":179,"username":"ahayashi","firstName":"Amir","lastName":"Hayashi","email":"ahayashi@company.io","lastLogin":"2025-07-01T09:00","tier":"Enterprise","role":"Director of Product"},{"id":180,"username":"iokonkwo","firstName":"Ivan","lastName":"Okonkwo","email":"iokonkwo@company.io","lastLogin":"2025-10-10T09:00","tier":"Free","role":"Designer"},{"id":181,"username":"lherrera","firstName":"Leila","lastName":"Herrera","email":"lherrera@company.io","lastLogin":"2025-07-27T09:00","tier":"Enterprise","role":"VP Sales"},{"id":182,"username":"edahl","firstName":"Elijah","lastName":"Dahl","email":"edahl@company.io","lastLogin":"2025-11-09T09:00","tier":"Free","role":"Solutions Architect"},{"id":183,"username":"feriksson","firstName":"Felix","lastName":"Eriksson","email":"feriksson@company.io","lastLogin":"2026-02-08T09:00","tier":"Enterprise","role":"Designer"},{"id":184,"username":"casante","firstName":"Camila","lastName":"Asante","email":"casante@company.io","lastLogin":"2026-03-27T09:00","tier":"Enterprise","role":"DevOps Engineer"},{"id":185,"username":"lhayashi1","firstName":"Linh","lastName":"Hayashi","email":"lhayashi1@company.io","lastLogin":"2025-11-24T09:00","tier":"Enterprise","role":"Designer"},{"id":186,"username":"sthornton","firstName":"Siobhan","lastName":"Thornton","email":"sthornton@company.io","lastLogin":"2025-12-21T09:00","tier":"Enterprise","role":"QA Engineer"},{"id":187,"username":"rboateng","firstName":"Rory","lastName":"Boateng","email":"rboateng@company.io","lastLogin":"2026-03-17T09:00","tier":"Enterprise","role":"DevOps Engineer"},{"id":188,"username":"dkowalski","firstName":"Declan","lastName":"Kowalski","email":"dkowalski@company.io","lastLogin":"2026-01-17T09:00","tier":"Enterprise","role":"Business Analyst"},{"id":189,"username":"cmartins","firstName":"Chloe","lastName":"Martins","email":"cmartins@company.io","lastLogin":"2025-10-13T09:00","tier":"Free","role":"VP Marketing"},{"id":190,"username":"cdubois","firstName":"Cyrus","lastName":"Dubois","email":"cdubois@company.io","lastLogin":"2025-10-25T09:00","tier":"Enterprise","role":"Product Manager"},{"id":191,"username":"lhalvorsen","firstName":"Luna","lastName":"Halvorsen","email":"lhalvorsen@company.io","lastLogin":"2025-06-06T09:00","tier":"Free","role":"QA Engineer"},{"id":192,"username":"rserrano","firstName":"Riku","lastName":"Serrano","email":"rserrano@company.io","lastLogin":"2025-05-27T09:00","tier":"Pro","role":"Customer Success Manager"},{"id":193,"username":"lvang","firstName":"Lucas","lastName":"Vang","email":"lvang@company.io","lastLogin":"2025-07-15T09:00","tier":"Pro","role":"Software Engineer"},{"id":194,"username":"vkovacs","firstName":"Valentina","lastName":"Kovacs","email":"vkovacs@company.io","lastLogin":"2026-03-19T09:00","tier":"Free","role":"Technical Writer"},{"id":195,"username":"stanabe","firstName":"Sakura","lastName":"Tanabe","email":"stanabe@company.io","lastLogin":"2025-10-10T09:00","tier":"Pro","role":"Security Engineer"},{"id":196,"username":"lcastillo","firstName":"Linh","lastName":"Castillo","email":"lcastillo@company.io","lastLogin":"2025-05-06T09:00","tier":"Pro","role":"Solutions Architect"},{"id":197,"username":"mibrahim","firstName":"Minh","lastName":"Ibrahim","email":"mibrahim@company.io","lastLogin":"2025-06-05T09:00","tier":"Enterprise","role":"Sales Representative"},{"id":198,"username":"sbergmann","firstName":"Soo","lastName":"Bergmann","email":"sbergmann@company.io","lastLogin":"2026-04-18T09:00","tier":"Pro","role":"Security Engineer"},{"id":199,"username":"akovacs","firstName":"Aroha","lastName":"Kovacs","email":"akovacs@company.io","lastLogin":"2026-03-08T09:00","tier":"Free","role":"VP Sales"},{"id":200,"username":"weriksson","firstName":"Wei","lastName":"Eriksson","email":"weriksson@company.io","lastLogin":"2026-03-28T09:00","tier":"Free","role":"Solutions Architect"}];
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  if(u==='Admin' && p==='admin123'){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    initApp();
+  } else {
+    document.getElementById('login-error').style.display='block';
+  }
+}
+document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('login-user').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function doLogout(){
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-user').value='';
+  document.getElementById('login-pass').value='';
+}
+
+// ── TABS ──────────────────────────────────────────────────────────────
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',['directory','licenses'][i]===t);});
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.getElementById('page-'+t).classList.add('active');
+  if(t==='licenses') renderStats();
+}
+
+// ── DIRECTORY ─────────────────────────────────────────────────────────
+let sortKey='username', sortDir=1, curPage=1; const PER=25;
+let filtered=[];
+
+function initApp(){
+  // populate role filter
+  const rf = document.getElementById('filter-role');
+  const roles = [...new Set(users.map(u=>u.role))].sort();
+  roles.forEach(r=>{const o=document.createElement('option');o.value=r;o.text=r;rf.appendChild(o);});
+  renderTable(); renderStats();
+}
+
+function getFiltered(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  const tier=document.getElementById('filter-tier').value;
+  const role=document.getElementById('filter-role').value;
+  return users.filter(u=>{
+    const match = !q || [u.username,u.firstName,u.lastName,u.email].some(f=>f.toLowerCase().includes(q));
+    return match && (!tier||u.tier===tier) && (!role||u.role===role);
+  });
+}
+
+function sortBy(k){
+  if(sortKey===k) sortDir*=-1; else {sortKey=k;sortDir=1;}
+  renderTable();
+}
+
+function renderTable(){
+  filtered = getFiltered().sort((a,b)=>{
+    let av = sortKey==='daysSince' ? daysSince(a.lastLogin) : (a[sortKey]||'');
+    let bv = sortKey==='daysSince' ? daysSince(b.lastLogin) : (b[sortKey]||'');
+    return sortDir*(av<bv?-1:av>bv?1:0);
+  });
+  const total=filtered.length;
+  const pages=Math.ceil(total/PER)||1;
+  if(curPage>pages) curPage=1;
+  const slice=filtered.slice((curPage-1)*PER, curPage*PER);
+  const tbody=document.getElementById('table-body');
+  tbody.innerHTML=slice.map(u=>`
+    <tr data-id="${u.id}">
+      <td class="mono">${u.username}</td>
+      <td>${u.firstName}</td>
+      <td>${u.lastName}</td>
+      <td class="mono" style="font-size:12px">${u.email}</td>
+      <td style="font-size:12px">${dispDate(u.lastLogin)}</td>
+      <td class="mono" style="text-align:center">${daysSince(u.lastLogin)}</td>
+      <td><span class="badge badge-${u.tier.toLowerCase()}">${u.tier}</span></td>
+      <td class="role-tag ${PROTECTED_ROLES.includes(u.role)?'role-protected':''}">${u.role}${PROTECTED_ROLES.includes(u.role)?' 🔒':''}</td>
+      <td><button class="action-btn" onclick="openLoginModal(${u.id})">Edit Login</button></td>
+    </tr>
+  `).join('');
+  document.getElementById('page-info').textContent=`${total} users · Page ${curPage}/${pages}`;
+  document.getElementById('prev-btn').disabled=curPage<=1;
+  document.getElementById('next-btn').disabled=curPage>=pages;
+}
+function prevPage(){curPage--;renderTable();}
+function nextPage(){curPage++;renderTable();}
+
+// ── EXPORT CSV ────────────────────────────────────────────────────────
+function exportCSV(){
+  const rows=[['Username','First Name','Last Name','Email','Last Login','Tier','Role']];
+  getFiltered().forEach(u=>rows.push([u.username,u.firstName,u.lastName,u.email,dispDate(u.lastLogin),u.tier,u.role]));
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='user_directory.csv'; a.click();
+  showToast('CSV downloaded!');
+}
+
+// ── EDIT LAST LOGIN ───────────────────────────────────────────────────
+let editingUserId=null;
+function openLoginModal(id){
+  editingUserId=id;
+  const u=users.find(x=>x.id===id);
+  document.getElementById('modal-login-user').textContent=`${u.firstName} ${u.lastName} (${u.username})`;
+  document.getElementById('modal-login-val').value=u.lastLogin;
+  document.getElementById('modal-login').classList.add('open');
+}
+function saveLogin(){
+  const val=document.getElementById('modal-login-val').value;
+  if(!val) return;
+  const u=users.find(x=>x.id===editingUserId);
+  u.lastLogin=val;
+  closeModal('modal-login');
+  renderTable(); renderStats();
+  showToast(`Last login updated for ${u.username}`);
+}
+
+// ── LICENSE MANAGER ───────────────────────────────────────────────────
+let licPage=1; const LIC_PER=20;
+let licFiltered=[];
+
+function renderStats(){
+  const free=users.filter(u=>u.tier==='Free').length;
+  const pro=users.filter(u=>u.tier==='Pro').length;
+  const ent=users.filter(u=>u.tier==='Enterprise').length;
+  document.getElementById('stats-row').innerHTML=`
+    <div class="stat-card"><div class="label">Total Users</div><div class="value accent">${users.length}</div></div>
+    <div class="stat-card"><div class="label">Free</div><div class="value">${free}</div></div>
+    <div class="stat-card"><div class="label">Pro</div><div class="value blue">${pro}</div></div>
+    <div class="stat-card"><div class="label">Enterprise</div><div class="value purple">${ent}</div></div>
+    <div class="stat-card"><div class="label">Protected Roles</div><div class="value warn">${users.filter(u=>PROTECTED_ROLES.includes(u.role)).length}</div></div>
+  `;
+}
+
+function getLicFiltered(){
+  const q=(document.getElementById('lic-search')||{}).value?.toLowerCase()||'';
+  const tier=(document.getElementById('lic-tier')||{}).value||'';
+  return users.filter(u=>{
+    const match=!q||[u.username,u.firstName,u.lastName,u.email].some(f=>f.toLowerCase().includes(q));
+    return match&&(!tier||u.tier===tier);
+  });
+}
+
+function renderLicTable(){
+  licFiltered=getLicFiltered();
+  const total=licFiltered.length, pages=Math.ceil(total/LIC_PER)||1;
+  if(licPage>pages) licPage=1;
+  const slice=licFiltered.slice((licPage-1)*LIC_PER, licPage*LIC_PER);
+  document.getElementById('lic-body').innerHTML=slice.map(u=>{
+    const prot=PROTECTED_ROLES.includes(u.role);
+    return `<tr>
+      <td><input type="checkbox" class="row-check" data-id="${u.id}" ${prot?'disabled title="Protected role"':''}></td>
+      <td class="mono">${u.username}</td>
+      <td>${u.firstName} ${u.lastName}</td>
+      <td class="mono" style="font-size:12px">${u.email}</td>
+      <td><span class="badge badge-${u.tier.toLowerCase()}">${u.tier}</span></td>
+      <td class="role-tag ${prot?'role-protected':''}">${u.role}${prot?' 🔒':''}</td>
+      <td style="font-size:12px">${dispDate(u.lastLogin)}</td>
+      <td>
+        <button class="action-btn" onclick="openLicModal(${u.id},'downgrade')" ${prot?'disabled':''}>Downgrade</button>
+        <button class="action-btn" onclick="openLicModal(${u.id},'renew')" ${prot?'disabled':''}>Renew</button>
+      </td>
+    </tr>`;
+  }).join('');
+  document.getElementById('lic-page-info').textContent=`${total} users · Page ${licPage}/${pages}`;
+  document.getElementById('lic-prev').disabled=licPage<=1;
+  document.getElementById('lic-next').disabled=licPage>=pages;
+}
+
+function licPrev(){licPage--;renderLicTable();}
+function licNext(){licPage++;renderLicTable();}
+
+function toggleAll(cb){
+  document.querySelectorAll('.row-check:not(:disabled)').forEach(c=>c.checked=cb.checked);
+}
+
+let editingLicId=null, licAction='';
+function openLicModal(id,action){
+  editingLicId=id; licAction=action;
+  const u=users.find(x=>x.id===id);
+  document.getElementById('modal-lic-title').textContent=action==='downgrade'?'Downgrade License':'Renew License';
+  document.getElementById('modal-lic-user').textContent=`${u.firstName} ${u.lastName} (${u.username}) — current: ${u.tier}`;
+  document.getElementById('modal-lic-tier').value=action==='downgrade'?'Free':u.tier;
+  document.getElementById('modal-license').classList.add('open');
+}
+function saveLicense(){
+  const tier=document.getElementById('modal-lic-tier').value;
+  const u=users.find(x=>x.id===editingLicId);
+  u.tier=tier;
+  closeModal('modal-license');
+  renderLicTable(); renderStats();
+  showToast(`License updated for ${u.username} → ${tier}`);
+}
+
+function bulkDowngrade(){
+  const checked=[...document.querySelectorAll('.row-check:checked')].map(c=>+c.dataset.id);
+  if(!checked.length){showToast('No users selected');return;}
+  let count=0;
+  checked.forEach(id=>{
+    const u=users.find(x=>x.id===id);
+    if(u&&!PROTECTED_ROLES.includes(u.role)){u.tier='Free';count++;}
+  });
+  renderLicTable(); renderStats();
+  showToast(`${count} user(s) downgraded to Free`);
+}
+function bulkRenew(){
+  const checked=[...document.querySelectorAll('.row-check:checked')].map(c=>+c.dataset.id);
+  if(!checked.length){showToast('No users selected');return;}
+  showToast(`${checked.length} license(s) marked for renewal`);
+}
+
+// ── CSV IMPORT ────────────────────────────────────────────────────────
+const SYSTEM_FIELDS = [
+  { key: 'username',   label: 'Username',        required: true  },
+  { key: 'firstName',  label: 'First Name',       required: false },
+  { key: 'lastName',   label: 'Last Name',        required: false },
+  { key: 'email',      label: 'Email',            required: false },
+  { key: 'lastLogin',  label: 'Last Login',       required: false },
+  { key: 'tier',       label: 'Membership Tier',  required: false },
+  { key: 'role',       label: 'Role',             required: false },
+];
+
+let csvHeaders = [], csvRows = [], colMapping = {}, parsedImportRows = [];
+
+// Drag & drop
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', ()=> dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) handleFileSelect(f); });
+
+function handleFileSelect(file){
+  if(!file || !file.name.endsWith('.csv')){ showToast('Please select a .csv file'); return; }
+  const reader = new FileReader();
+  reader.onload = e => parseCSV(e.target.result, file.name);
+  reader.readAsText(file);
+}
+
+function parseCSV(text, filename){
+  const lines = text.trim().split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length < 2){ showToast('CSV must have a header row and at least one data row'); return; }
+
+  // Parse header — handle quoted fields
+  csvHeaders = splitCSVLine(lines[0]);
+  csvRows = lines.slice(1).map(l => splitCSVLine(l));
+
+  // Auto-map columns by fuzzy header match
+  colMapping = {};
+  SYSTEM_FIELDS.forEach(sf => {
+    const idx = csvHeaders.findIndex(h => {
+      const hn = h.toLowerCase().replace(/[\s_-]/g,'');
+      const fn = sf.label.toLowerCase().replace(/[\s_-]/g,'');
+      const fk = sf.key.toLowerCase();
+      return hn===fn || hn===fk || hn.includes(fk) || fk.includes(hn);
+    });
+    colMapping[sf.key] = idx >= 0 ? idx : -1;
+  });
+
+  // Update drop zone UI
+  dz.classList.add('has-file');
+  document.getElementById('drop-title').textContent = `✓ ${filename}`;
+  document.getElementById('drop-sub').textContent = `${csvRows.length} data rows · ${csvHeaders.length} columns detected`;
+
+  // Build column mapper UI
+  buildColMapper();
+  document.getElementById('upload-preview-bar').innerHTML = `<span>${csvRows.length}</span> rows ready to map`;
+  document.getElementById('btn-preview').style.display = '';
+  document.getElementById('btn-import').style.display = '';
+}
+
+function splitCSVLine(line){
+  const res = []; let cur = '', inQ = false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(c==='"'){ inQ=!inQ; }
+    else if(c===',' && !inQ){ res.push(cur.trim()); cur=''; }
+    else { cur+=c; }
+  }
+  res.push(cur.trim());
+  return res;
+}
+
+function buildColMapper(){
+  const grid = document.getElementById('col-map-grid');
+  grid.innerHTML = SYSTEM_FIELDS.map(sf => {
+    const opts = ['<option value="-1">— skip —</option>',
+      ...csvHeaders.map((h,i)=>`<option value="${i}" ${colMapping[sf.key]===i?'selected':''}>${h}</option>`)
+    ].join('');
+    return `<div class="col-map-row">
+      <span class="field-name">${sf.label}${sf.required?' *':''}</span>
+      <select onchange="colMapping['${sf.key}']=+this.value">${opts}</select>
+    </div>`;
+  }).join('');
+  document.getElementById('col-map-section').classList.add('visible');
+}
+
+function buildImportRows(){
+  parsedImportRows = csvRows.map((row, ri) => {
+    const get = key => { const i=colMapping[key]; return i>=0 && i<row.length ? row[i].replace(/^"|"$/g,'').trim() : ''; };
+    const username   = get('username');
+    const firstName  = get('firstName')  || username;
+    const lastName   = get('lastName')   || '';
+    const email      = get('email')      || `${username}@imported.io`;
+    const rawLogin   = get('lastLogin');
+    const lastLogin  = parseLoginDate(rawLogin);
+    const rawTier    = get('tier');
+    const tier       = normalizeTier(rawTier);
+    const role       = get('role')       || 'Software Engineer';
+
+    const isDupe     = !!users.find(u => u.username === username);
+    const isValid    = !!username;
+
+    return { username, firstName, lastName, email, lastLogin, tier, role, isDupe, isValid, rowNum: ri+2 };
+  });
+}
+
+function parseLoginDate(raw){
+  if(!raw) return new Date(Date.now() - 30*86400000).toISOString().slice(0,16);
+  // Try ISO, then common formats
+  const d = new Date(raw);
+  if(!isNaN(d)) return d.toISOString().slice(0,16);
+  // Try DD/MM/YYYY or MM/DD/YYYY
+  const parts = raw.split(/[\/\-\.]/);
+  if(parts.length===3){
+    const attempt = new Date(`${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`);
+    if(!isNaN(attempt)) return attempt.toISOString().slice(0,16);
+  }
+  return new Date(Date.now() - 30*86400000).toISOString().slice(0,16);
+}
+
+function normalizeTier(raw){
+  const r = (raw||'').toLowerCase().trim();
+  if(r.includes('enterprise')) return 'Enterprise';
+  if(r.includes('pro'))        return 'Pro';
+  return 'Free';
+}
+
+function openImportPreview(){
+  buildImportRows();
+  const valid   = parsedImportRows.filter(r=>r.isValid && !r.isDupe);
+  const dupes   = parsedImportRows.filter(r=>r.isDupe);
+  const invalid = parsedImportRows.filter(r=>!r.isValid);
+  document.getElementById('import-preview-sub').textContent =
+    `${parsedImportRows.length} rows parsed · ${valid.length} new · ${dupes.length} duplicate usernames (will be skipped) · ${invalid.length} invalid`;
+
+  document.getElementById('preview-body').innerHTML = parsedImportRows.slice(0,50).map(r => {
+    const statusColor = r.isDupe ? 'var(--warn)' : (!r.isValid ? 'var(--danger)' : 'var(--accent)');
+    const statusText  = r.isDupe ? '⚠ Duplicate' : (!r.isValid ? '✕ Invalid' : '✓ New');
+    return `<tr style="${r.isDupe||!r.isValid?'opacity:.55':''}">
+      <td class="mono">${r.username||'—'}</td>
+      <td>${r.firstName}</td><td>${r.lastName}</td>
+      <td class="mono" style="font-size:11px">${r.email}</td>
+      <td style="font-size:11px">${r.lastLogin.slice(0,10)}</td>
+      <td><span class="badge badge-${r.tier.toLowerCase()}">${r.tier}</span></td>
+      <td style="font-size:12px">${r.role}</td>
+      <td style="color:${statusColor};font-weight:600;font-size:12px">${statusText}</td>
+    </tr>`;
+  }).join('');
+  if(parsedImportRows.length>50){
+    document.getElementById('preview-body').innerHTML += `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:12px">… and ${parsedImportRows.length-50} more rows</td></tr>`;
+  }
+
+  document.getElementById('import-result').style.display='none';
+  document.getElementById('confirm-import-btn').style.display='';
+  document.getElementById('modal-import').classList.add('open');
+}
+
+function confirmImport(){
+  const toAdd = parsedImportRows.filter(r=>r.isValid && !r.isDupe);
+  const skipped = parsedImportRows.filter(r=>r.isDupe || !r.isValid);
+  let nextId = Math.max(...users.map(u=>u.id), 0) + 1;
+
+  toAdd.forEach(r => {
+    users.push({ id: nextId++, username: r.username, firstName: r.firstName, lastName: r.lastName,
+      email: r.email, lastLogin: r.lastLogin, tier: r.tier, role: r.role });
+  });
+
+  // Refresh role dropdown
+  const rf = document.getElementById('filter-role');
+  const existing = new Set([...rf.options].map(o=>o.value));
+  [...new Set(users.map(u=>u.role))].sort().forEach(r=>{
+    if(!existing.has(r)){const o=document.createElement('option');o.value=r;o.text=r;rf.appendChild(o);}
+  });
+
+  renderTable(); renderLicTable(); renderStats();
+
+  const res = document.getElementById('import-result');
+  res.className = skipped.length ? 'import-result warn' : 'import-result success';
+  res.style.display = 'block';
+  document.getElementById('import-result-text').textContent =
+    `✓ ${toAdd.length} user${toAdd.length!==1?'s':''} appended successfully.` +
+    (skipped.length ? ` ${skipped.length} row${skipped.length!==1?'s':''} skipped.` : '');
+  if(skipped.length){
+    document.getElementById('skipped-list').textContent =
+      'Skipped: ' + skipped.map(r=>`${r.username||'(blank)'} [${r.isDupe?'duplicate':'invalid'}]`).join(', ');
+  } else {
+    document.getElementById('skipped-list').textContent='';
+  }
+  document.getElementById('confirm-import-btn').style.display='none';
+  document.getElementById('upload-preview-bar').innerHTML =
+    `<span>${toAdd.length}</span> users appended · <span>${skipped.length}</span> skipped`;
+  showToast(`${toAdd.length} users imported successfully!`);
+}
+
+function doImport(){ openImportPreview(); }
+
+function resetUpload(){
+  csvHeaders=[]; csvRows=[]; colMapping={}; parsedImportRows=[];
+  dz.classList.remove('has-file','drag-over');
+  document.getElementById('drop-title').textContent='Drop your CSV here, or click to browse';
+  document.getElementById('drop-sub').textContent='Accepts .csv files — columns will be auto-mapped';
+  document.getElementById('col-map-section').classList.remove('visible');
+  document.getElementById('col-map-grid').innerHTML='';
+  document.getElementById('upload-preview-bar').innerHTML='';
+  document.getElementById('btn-preview').style.display='none';
+  document.getElementById('btn-import').style.display='none';
+  document.getElementById('csv-file-input').value='';
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2800);
+}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');}));
+
+// init lic tab on first render
+document.getElementById('page-licenses').addEventListener('transitionend',()=>{});
+// pre-render lic table when tab switches
+const origSwitch=switchTab;
+window.switchTab=function(t){origSwitch(t);if(t==='licenses')renderLicTable();};
+</script>
+</body>
+</html>
